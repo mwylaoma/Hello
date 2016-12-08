@@ -12,6 +12,6 @@ import retrofit2.http.POST;
 
 public interface LoginService {
 
-    @POST("/api/security/login")
+    @POST("api/security/login")
     Call<String> login(@Body LoginRequest loginRequest);
 }

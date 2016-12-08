@@ -3,21 +3,20 @@ package com.example.terryma.hello;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
-import android.content.pm.PackageManager;
-import android.support.annotation.NonNull;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
+import android.app.AlertDialog;
 import android.app.LoaderManager.LoaderCallbacks;
-
 import android.content.CursorLoader;
 import android.content.Loader;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
-
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
+import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
+import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
@@ -31,19 +30,21 @@ import android.widget.Toast;
 
 import com.example.terryma.hello.requests.LoginRequest;
 import com.example.terryma.hello.services.login.LoginService;
+import com.socks.library.KLog;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import okhttp3.HttpUrl;
 import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 import static android.Manifest.permission.INTERNET;
 import static android.Manifest.permission.READ_CONTACTS;
-import static android.R.attr.duration;
 
 /**
  * A login screen that offers login via email/password.
@@ -103,6 +104,12 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = findViewById(R.id.login_progress);
+
+        initExceptionHandler();
+    }
+
+    private void initExceptionHandler() {
+        Thread.setDefaultUncaughtExceptionHandler(new ExceptionHandler(this));
     }
 
     private void populateAutoComplete() {
@@ -117,7 +124,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         getLoaderManager().initLoader(0, null, this);
     }
 
-    private boolean mayRequestInternet(){
+    private boolean mayRequestInternet() {
         if (checkSelfPermission(INTERNET) == PackageManager.PERMISSION_GRANTED) {
             return true;
         }
@@ -146,7 +153,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         } else {
             requestPermissions(new String[]{READ_CONTACTS}, REQUEST_READ_CONTACTS);
         }
-
 
 
         return false;
@@ -324,66 +330,53 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
      */
     public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
 
-        private final String mEmail;
+        private final String mUserName;
         private final String mPassword;
         private String appkey;
         private String errorMsg;
+        private Exception exception;
 
         UserLoginTask(String email, String password) {
-            mEmail = email;
+            mUserName = email;
             mPassword = password;
         }
 
         @Override
         protected Boolean doInBackground(Void... params) {
-            // TODO: attempt authentication against a network service.
-
-            /*try {
-                // Simulate network access.
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                return false;
-            }*/
-
-            /*for (String credential : DUMMY_CREDENTIALS) {
-                String[] pieces = credential.split(":");
-                if (pieces[0].equals(mEmail)) {
-                    // Account exists, return true if the password matches.
-                    return pieces[1].equals(mPassword);
-                }
-            }*/
-
-            Retrofit retrofit = new Retrofit.Builder()
-                    .baseUrl("http://192.168.8.201:8080/")
-                    .addConverterFactory(GsonConverterFactory.create())
-                    .build();
-
-            LoginRequest loginRequest = new LoginRequest();
-            loginRequest.setAccountType("EMPLOYEE");
-            loginRequest.setBusinessModuleCode("HDW");
-            loginRequest.setUsername(mEmail);
-            loginRequest.setPassword(mPassword);
-            loginRequest.setWarehouseCode("000");
-
-            LoginService loginService = retrofit.create(LoginService.class);
-            Call<String> login = loginService.login(loginRequest);
-
             try {
+
+                Retrofit retrofit = new Retrofit.Builder()
+                        .baseUrl("http://192.168.8.253:8080/hdwapi-main/")
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .build();
+
+                LoginRequest loginRequest = new LoginRequest();
+                loginRequest.setAccountType("EMPLOYEE");
+                loginRequest.setBusinessModuleCode("HDW");
+                loginRequest.setUsername(mUserName);
+                loginRequest.setPassword(mPassword);
+                loginRequest.setWarehouseCode("000");
+
+                LoginService loginService = retrofit.create(LoginService.class);
+
+                Call<String> login = loginService.login(loginRequest);
+
+                HttpUrl url = login.request().url();
+                KLog.d(url.toString());
+
                 Response<String> execute = login.execute();
-                if(execute.code() != 200){
+                if (execute.code() != 200) {
                     errorMsg = execute.errorBody().string();
                     return false;
-                }else{
+                } else {
                     appkey = execute.body();
                 }
-                //Toast.makeText(getApplicationContext(), body, Toast.LENGTH_SHORT).show();
-
             } catch (IOException e) {
+                exception = e;
                 e.printStackTrace();
+                return false;
             }
 
-
-            // TODO: register the new account here.
             return true;
         }
 
@@ -392,12 +385,25 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             mAuthTask = null;
             showProgress(false);
 
+            if (exception != null) {
+                //Toast.makeText(getApplicationContext(), exception.getMessage(), Toast.LENGTH_LONG).show();
+                new AlertDialog.Builder(LoginActivity.this)
+                        .setTitle("异常")
+                        .setMessage(exception.getMessage())
+                        .setPositiveButton("确定", null)
+                        .show();
+            }
 
             if (success) {
                 Toast.makeText(getApplicationContext(), appkey, Toast.LENGTH_SHORT).show();
                 //finish();
             } else {
-                Toast.makeText(getApplicationContext(), errorMsg, Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(), errorMsg, Toast.LENGTH_LONG).show();
+                new AlertDialog.Builder(LoginActivity.this)
+                        .setTitle("异常")
+                        .setMessage(errorMsg)
+                        .setPositiveButton("确定", null)
+                        .show();
                 //mPasswordView.setError(errorMsg);
                 //mPasswordView.requestFocus();
             }
