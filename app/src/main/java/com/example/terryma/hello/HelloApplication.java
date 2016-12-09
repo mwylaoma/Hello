@@ -10,6 +10,17 @@ import com.socks.library.KLog;
  */
 
 public class HelloApplication extends Application {
+
+    private String lastAppkey;
+
+    public String getLastAppkey() {
+        return lastAppkey;
+    }
+
+    public void setLastAppkey(String lastAppkey) {
+        this.lastAppkey = lastAppkey;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();

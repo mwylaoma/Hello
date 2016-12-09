@@ -6,6 +6,7 @@ import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.CursorLoader;
+import android.content.Intent;
 import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -28,6 +29,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.terryma.hello.common.fastjson.FastJsonConverterFactory;
 import com.example.terryma.hello.requests.LoginRequest;
 import com.example.terryma.hello.services.login.LoginService;
 import com.socks.library.KLog;
@@ -38,16 +40,14 @@ import java.util.List;
 
 import okhttp3.HttpUrl;
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 import static android.Manifest.permission.INTERNET;
 import static android.Manifest.permission.READ_CONTACTS;
 
 /**
- * A login screen that offers login via email/password.
+ * A list screen that offers list via email/password.
  */
 public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<Cursor> {
 
@@ -64,7 +64,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             "foo@example.com:hello", "bar@example.com:world"
     };
     /**
-     * Keep track of the login task to ensure we can cancel it if requested.
+     * Keep track of the list task to ensure we can cancel it if requested.
      */
     private UserLoginTask mAuthTask = null;
 
@@ -78,7 +78,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-        // Set up the login form.
+        // Set up the list form.
         mUserNameView = (EditText) findViewById(R.id.userName);
         populateAutoComplete();
 
@@ -173,9 +173,9 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
 
     /**
-     * Attempts to sign in or register the account specified by the login form.
+     * Attempts to sign in or register the account specified by the list form.
      * If there are form errors (invalid email, missing fields, etc.), the
-     * errors are presented and no actual login attempt is made.
+     * errors are presented and no actual list attempt is made.
      */
     private void attemptLogin() {
         if (mAuthTask != null) {
@@ -186,7 +186,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         mUserNameView.setError(null);
         mPasswordView.setError(null);
 
-        // Store values at the time of the login attempt.
+        // Store values at the time of the list attempt.
         String userName = mUserNameView.getText().toString();
         String password = mPasswordView.getText().toString();
 
@@ -212,12 +212,12 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         }*/
 
         if (cancel) {
-            // There was an error; don't attempt login and focus the first
+            // There was an error; don't attempt list and focus the first
             // form field with an error.
             focusView.requestFocus();
         } else {
             // Show a progress spinner, and kick off a background task to
-            // perform the user login attempt.
+            // perform the user list attempt.
             showProgress(true);
             mAuthTask = new UserLoginTask(userName, password);
             mAuthTask.execute((Void) null);
@@ -235,7 +235,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     }
 
     /**
-     * Shows the progress UI and hides the login form.
+     * Shows the progress UI and hides the list form.
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
     private void showProgress(final boolean show) {
@@ -325,7 +325,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     }
 
     /**
-     * Represents an asynchronous login/registration task used to authenticate
+     * Represents an asynchronous list/registration task used to authenticate
      * the user.
      */
     public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
@@ -346,8 +346,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             try {
 
                 Retrofit retrofit = new Retrofit.Builder()
-                        .baseUrl("http://192.168.8.253:8080/hdwapi-main/")
-                        .addConverterFactory(GsonConverterFactory.create())
+                        .baseUrl("http://192.168.8.201:8080/")
+                        .addConverterFactory(FastJsonConverterFactory.create())
                         .build();
 
                 LoginRequest loginRequest = new LoginRequest();
@@ -370,6 +370,9 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                     return false;
                 } else {
                     appkey = execute.body();
+
+                    HelloApplication application = (HelloApplication) getApplication();
+                    application.setLastAppkey(appkey);
                 }
             } catch (IOException e) {
                 exception = e;
@@ -396,7 +399,12 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
             if (success) {
                 Toast.makeText(getApplicationContext(), appkey, Toast.LENGTH_SHORT).show();
-                //finish();
+
+                Intent intent = new Intent();
+                intent.setClass(LoginActivity.this, MainActivity.class);
+                LoginActivity.this.startActivity(intent);
+
+                finish();
             } else {
                 //Toast.makeText(getApplicationContext(), errorMsg, Toast.LENGTH_LONG).show();
                 new AlertDialog.Builder(LoginActivity.this)
